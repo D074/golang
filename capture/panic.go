@@ -41,6 +41,14 @@ func CapturePanic(h http.Handler) http.Handler {
 }
 
 func notifySlack(err interface{}) {
+	if captureConfig.SlackClient.WebHookUrl == "" {
+		log.Println("web hook url for slack cannot be empty")
+		return
+	}
+	if captureConfig.SlackClient.Channel == "" {
+		log.Println("channel for slack cannot be empty")
+		return
+	}
 	var attachment Attachment
 
 	text := ""
@@ -49,7 +57,7 @@ func notifySlack(err interface{}) {
 	}
 	text += "Panic throws! please check"
 	if captureConfig.SlackClient.MentionHere {
-		text += "<!here>"
+		text += "<!here> "
 	}
 	for _, user := range captureConfig.SlackClient.MentionUser {
 		text += "<@" + user + "> "
@@ -68,9 +76,11 @@ func notifySlack(err interface{}) {
 		text += "*Trace:*"
 	}
 	msg := SlackMessage{
+		Username:    captureConfig.SlackClient.UserName,
 		Text:        text,
 		IconEmoji:   ":zap",
 		Attachments: []Attachment{attachment},
+		Channel:     captureConfig.SlackClient.Channel,
 	}
 	err = Send(msg)
 	if err != nil {
