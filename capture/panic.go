@@ -40,6 +40,19 @@ func CapturePanic(h http.Handler) http.Handler {
 	})
 }
 
+func CapturePanicGo() func() {
+	return func() {
+		if err := recover(); err != nil {
+			switch captureConfig.OutputPanic {
+			case Slack:
+				notifySlack(err)
+			default:
+				log.Println(captureConfig.OutputPanic, " has not supported yet")
+			}
+		}
+	}
+}
+
 func notifySlack(err interface{}) {
 	if captureConfig.SlackClient.WebHookUrl == "" {
 		log.Println("web hook url for slack cannot be empty")
