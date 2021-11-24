@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"strconv"
 	"time"
@@ -30,6 +31,8 @@ func CapturePanic(h http.Handler) http.Handler {
 				switch captureConfig.OutputPanic {
 				case Slack:
 					notifySlack(err)
+				case Stdout:
+					printToStdOut(err)
 				default:
 					log.Println(captureConfig.OutputPanic, " has not supported yet")
 				}
@@ -40,15 +43,18 @@ func CapturePanic(h http.Handler) http.Handler {
 	})
 }
 
-func CapturePanicGo() func() {
-	return func() {
-		if err := recover(); err != nil {
-			switch captureConfig.OutputPanic {
-			case Slack:
-				notifySlack(err)
-			default:
-				log.Println(captureConfig.OutputPanic, " has not supported yet")
-			}
+var CapturePanicGo = func() {
+	if captureConfig == nil {
+		log.Panicln("capture config is not set")
+	}
+	if err := recover(); err != nil {
+		switch captureConfig.OutputPanic {
+		case Slack:
+			notifySlack(err)
+		case Stdout:
+			printToStdOut(err)
+		default:
+			log.Println(captureConfig.OutputPanic, " has not supported yet")
 		}
 	}
 }
@@ -99,4 +105,11 @@ func notifySlack(err interface{}) {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+func printToStdOut(err interface{}) {
+	buf := make([]byte, 2048)
+	n := runtime.Stack(buf, false)
+	buf = buf[:n]
+	fmt.Fprintf(os.Stdout, "%s", string(buf))
 }
